@@ -13,24 +13,28 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
+import { TaskModal } from "./components/taskModal";
+import { baseUrl } from "../utils/helperFunctions";
 
 function Dashboard() {
     const [data, setData] = useState([]);
     const [updateMessage, setUpdateMessage] = useState('');
-    const [selectedTask, setSelectedTask] = useState({ taskId: '', value: '' });
+    const [selectedTask, setSelectedTask] = useState([]);
     const [openToast, setOpenToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [toastSeverity, setToastSeverity] = useState('success');
-    const [displayNewTaskModal,setDisplayNewTaskModal] = useState(false)
+    const [displayModal, setDisplayModal] = useState({newTask:false, taskInfo:false})
+    // const [displayNewTaskModal,setDisplayNewTaskModal] = useState(false)
     const [newTaskData, setNewTaskData] = useState({
         taskName: '',
         taskDescription: '',
         tags: [],
         notes: [],
         status: 'open',
-        dueDate: ''
+        dueDate: '',
+        assignedTo:"",
     });
-
+const [noteData,setNoteData] = useState("");
 
 
     function formatDate(inputDate) {
@@ -60,7 +64,7 @@ function Dashboard() {
     const handleAddNewTask = () => {
         // Call your API to add a new task with newTaskData
         handleNewTask(newTaskData);
-        setDisplayNewTaskModal(false); // Close the modal after adding the task
+        setDisplayModal({newTask:false}); // Close the modal after adding the task
     };
 
     const handleToast = (message, severity) => {
@@ -77,10 +81,6 @@ function Dashboard() {
     };
 
 
-// const baseUrl = "https://dashboard-advance-task-manager.wm.r.appspot.com"
-
-const baseUrl = "http://localhost:8080"
-   
 
 
 
@@ -107,6 +107,41 @@ const handleNewTask = () =>{
 
    }
 
+
+   const handleAddNotes = () =>{
+    const payload = noteData
+    
+    const url = `${baseUrl}/task/v1/notes/${selectedTask.taskId}/`;
+    axios.put(url, payload)
+        .then(response => {
+            setUpdateMessage(`note has been added`);
+            handleToast(`note has been added`, 'success');
+           // Update the local state to reflect the new note
+           const updatedTasks = data.map(task => {
+            if (task.taskId === selectedTask.taskId) {
+                return {
+                    ...task,
+                    notes: [...task.notes, { noteText: noteData, timeCreated: new Date().toISOString() }] // Assuming you want to store the timestamp as well
+                };
+            }
+            return task;
+        });
+
+        setData(updatedTasks); // Update the state with the updated tasks
+        })
+        .catch(error => {
+            console.error("Error Fetching Data:", error);
+            handleToast('Failed to add note', 'error');
+        });
+};
+
+
+const handleNewNoteInputChange = (event) => {
+    const { value } = event.target;
+    setNoteData(value);
+
+
+};
     const changeStatus = (status,taskId) => {
         const url = `${baseUrl}/task/v1/task/${taskId}/${status}`;
         axios.put(url, [])
@@ -137,10 +172,17 @@ const handleNewTask = () =>{
 
     return (
         <div className="App">
-              {/* New Task Modal */}
-              <Dialog open={displayNewTaskModal} onClose={() => setDisplayNewTaskModal(false)}>
+              {/*  Modal */}
+
+       <TaskModal data={selectedTask} displayNewTaskModal={displayModal} setDisplayNewTaskModal={setDisplayModal} handleAddNotes={handleAddNotes} noteData={noteData}  handleNewNoteInputChange={handleNewNoteInputChange} />
+
+              <Dialog open={displayModal.newTask} onClose={() => setDisplayModal({newTask:false,taskInfo:false})}>
                 <DialogTitle>Add New Task</DialogTitle>
                 <DialogContent>
+
+
+   
+
                     <TextField
                         autoFocus
                         margin="dense"
@@ -183,6 +225,16 @@ const handleNewTask = () =>{
                         value={newTaskData.status}
                         onChange={handleNewTaskInputChange}
                     />
+                      <TextField
+                        margin="dense"
+                        id="assignedTo"
+                        name="assignedTo"
+                        label="Assign To"
+                        type="text"
+                        fullWidth
+                        value={newTaskData.assignedTo}
+                        onChange={handleNewTaskInputChange}
+                    />
                     <TextField
                         margin="dense"
                         id="dueDate"
@@ -198,7 +250,7 @@ const handleNewTask = () =>{
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDisplayNewTaskModal(false)} color="primary">
+                    <Button onClick={() => setDisplayModal({newTask:false})} color="primary">
                         Cancel
                     </Button>
                     <Button onClick={handleAddNewTask} color="primary">
@@ -210,14 +262,37 @@ const handleNewTask = () =>{
             <header className="App-header">
                 Dashboard
             </header>
-            <div onClick={()=>setDisplayNewTaskModal(true)} class="add-button">
+            <div onClick={()=>setDisplayModal({newTask:true})} class="add-button">
     <span class="plus-sign">+</span>
     <span class="button-text">Add</span>
   </div>
             <Box display="flex" flexDirection={"column"} justifyContent="center" alignItems="center" p={5}>
                 {data.map(task => (
-                    <Card key={task.taskId} sx={{ display: "flex", width: "100%", margin: 1 }}>
-                        <CardContent>{formatDate(task.timeCreated)}</CardContent>
+                    <Card onClick={()=>{
+                        setDisplayModal({taskInfo:true})
+                        setSelectedTask(task)
+                    }}
+                    key={task.taskId} sx={{ display: "flex", width: "100%", margin: 1 }}>
+                        <CardContent><div style={{display:"flex", flexDirection:"column"}}>
+                            <div>
+                            {formatDate(task.timeCreated)} 
+                            </div >
+                            <Typography 
+                             style={{
+                                display: 'inline-block',
+                                backgroundColor: 'green',
+                                color: '#ffffff',
+                                padding: '5px 10px',
+                                borderRadius: '16px',
+                                marginRight: '10px',
+                                marginBottom: '10px',
+                                fontSize: '14px',
+                            }}
+                            variant="p">
+                            {task.assignedTo}
+                            </Typography>
+                            
+                            </div>  </CardContent>
                         <CardContent>
                             <Typography variant="h5" component="div">
                                 {task.taskName}
