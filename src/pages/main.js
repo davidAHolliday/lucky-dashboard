@@ -34,7 +34,7 @@ function Dashboard() {
         dueDate: '',
         assignedTo:"",
     });
-const [noteData,setNoteData] = useState("");
+const [noteData,setNoteData] = useState({noteText:"",createdBy:""});
 
 
     function formatDate(inputDate) {
@@ -118,13 +118,11 @@ const handleNewTask = () =>{
             handleToast(`note has been added`, 'success');
            // Update the local state to reflect the new note
            const updatedTasks = data.map(task => {
-            if (task.taskId === selectedTask.taskId) {
                 return {
                     ...task,
                     notes: [...task.notes, { noteText: noteData, timeCreated: new Date().toISOString() }] // Assuming you want to store the timestamp as well
                 };
-            }
-            return task;
+            
         });
 
         setData(updatedTasks); // Update the state with the updated tasks
@@ -138,7 +136,7 @@ const handleNewTask = () =>{
 
 const handleNewNoteInputChange = (event) => {
     const { value } = event.target;
-    setNoteData(value);
+    setNoteData((prev)=>({...prev,noteText:value,createdBy:"M. Perez"}));
 
 
 };
